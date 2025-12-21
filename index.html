@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Éditeur de Bulles de Dialogue pour BD</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💬</text></svg>">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Inclusion des polices de Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Comic+Neue:wght@400;700&family=Indie+Flower&family=Permanent+Marker&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Comic Neue', cursive;
+            background-color: #f0f0f0;
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+        }
+        
+        /* Tailwind custom scrollbar */
+        .bubble-text::-webkit-scrollbar {
+            width: 8px;
+        }
+        .bubble-text::-webkit-scrollbar-thumb {
+            background-color: #a0aec0;
+            border-radius: 4px;
+        }
+        .bubble-text::-webkit-scrollbar-track {
+            background-color: #edf2f7;
+        }
+        
+        /* Custom cursor for rotation handle */
+        .cursor-rotate {
+            cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.49 15c-.37-.76-1.39-1.46-2.87-1.84A14.98 14.98 0 0 0 12 13c-3.9 0-7.04 1.84-7.91 3.35"></path><path d="M22 18a9 9 0 0 1-9 9H3l2.7-2.7A6.96 6.96 0 0 0 13 20h3c2.48 0 4.05-.73 4.37-1"></path><polyline points="17 11 22 18 17 22"></polyline></svg>') 12 12, pointer;
+        }
+        
+        /* S'assurer que les polices sont chargées avant le rendu */
+        .font-loaded {
+            opacity: 1;
+            transition: opacity 0.3s ease-in;
+        }
+        
+        #root {
+            opacity: 0;
+        }
+        
+        #root.font-loaded {
+            opacity: 1;
+        }
+    </style>
+    <!-- Dependencies for running React/TSX directly in the browser -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@18.2.0",
+    "react/": "https://esm.sh/react@18.2.0/",
+    "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+    "react-dom/": "https://esm.sh/react-dom@18.2.0/",
+    "html2canvas": "https://esm.sh/html2canvas@1.4.1"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+<body>
+    <div id="root"></div>
+    
+    <script>
+        // Attendre que les polices soient chargées avant d'afficher l'application
+        document.fonts.ready.then(function() {
+            console.log('Polices chargées avec succès');
+            document.getElementById('root').classList.add('font-loaded');
+        });
+    </script>
+    
+    <!-- The main script is now processed by Babel -->
+    <script type="text/babel" data-type="module" src="./index.tsx"></script>
+<script type="module" src="/index.tsx"></script>
+</body>
+</html>

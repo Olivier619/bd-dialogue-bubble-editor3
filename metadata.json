@@ -1,0 +1,6 @@
+{
+  "name": "Bd Dialogue Bubble Editor 2",
+  "description": "An interactive web application to add and customize dialogue bubbles on comic book pages. Supports various bubble types, fonts, sizes, and direct manipulation for position, size, and rotation. Export your creations as PNG.",
+  "requestFramePermissions": [],
+  "prompt": ""
+}
