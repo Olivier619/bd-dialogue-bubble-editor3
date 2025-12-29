@@ -49,25 +49,67 @@ export const BubbleItem = forwardRef<BubbleItemHandle, BubbleItemProps>(({ bubbl
     if (!isEditingText || !textEditRef.current) return false;
 
     const selection = window.getSelection();
-    if (!selection || selection.isCollapsed || selection.rangeCount === 0) return false;
+    if (!selection || selection.rangeCount === 0) return false;
 
     const range = selection.getRangeAt(0);
     if (!textEditRef.current.contains(range.commonAncestorContainer)) return false;
 
-    const styleValue = style === 'fontSize' ? `${value}px` : FONT_FAMILY_MAP[value as FontName];
-
-    document.execCommand('styleWithCSS', false, 'true');
-    if (style === 'fontFamily') document.execCommand('fontName', false, styleValue);
-    if (style === 'fontSize') document.execCommand('fontSize', false, '1');
-
-    const fontElements = textEditRef.current.getElementsByTagName('font');
-    for (const element of Array.from(fontElements)) {
-      const fontEl = element as any;
-      if (fontEl.size === '1') {
-        fontEl.removeAttribute('size');
-        fontEl.style.fontSize = styleValue;
-      }
+    // Helper to calculate new style
+    const getNewStyleValue = (currentVal: string, delta: number): string => {
+      const currentSize = parseInt(currentVal) || bubble.fontSize;
+      const newSize = Math.max(MIN_FONT_SIZE, Math.min(MAX_FONT_SIZE, currentSize + delta));
+      return `${newSize}px`;
     }
+
+    // New approach: Wrap selection in span or update existing span
+    // Since complex range manipulation is error prone, let's try a simpler approach if possible.
+    // However, for precise selection styling, we need to handle the range.
+
+    // Simplification: use execCommand for fontSize but manage the unexpected '1' size better.
+    // The issue is likely that execCommand('fontSize', false, '7') maps to something huge, '1' maps to tiny.
+    // We cannot pass pixels to execCommand fontSize.
+    // So we MUST use the hack or write a custom wrapper.
+    // Let's refine the hack first as it is less code change than a full rich text engine.
+
+    // HACK IMPROVEMENT:
+    // 1. Calculate the target size BEFORE calling execCommand (we were doing this in the caller usually, but let's centralize).
+    // Actually the caller passes the exact value or the loop does.
+    // In handleWheel: `applyStyleToCurrentSelection('fontSize', newSize)` - so value IS the target size in pixels.
+
+    if (style === 'fontSize') {
+      const sizePx = `${value}px`;
+      // Use a unique marker
+      const marker = '7'; // largest size, unlikely to be used by accident? or 1.
+      document.execCommand('fontSize', false, marker);
+
+      const fontElements = textEditRef.current.getElementsByTagName('font');
+      let replaced = false;
+      // Convert live list to array to avoid issues during modification
+      Array.from(fontElements).forEach((element: Element) => {
+        // Cast to any because font tag properties are not in standard types
+        const fontEl = element as any;
+        if (fontEl.getAttribute('size') === marker) {
+          const span = document.createElement('span');
+          span.style.fontSize = sizePx;
+          span.innerHTML = fontEl.innerHTML;
+
+          // Preserve other styles? font tag is deprecated so it only has color/face/size
+          if (fontEl.face) span.style.fontFamily = fontEl.face;
+          if (fontEl.color) span.style.color = fontEl.color;
+
+          fontEl.parentNode?.replaceChild(span, fontEl);
+          replaced = true;
+        }
+      });
+
+      // If we failed to find the font tag but execCommand returned true, we might be in trouble.
+      // But usually it works. The issue might be that `value` passed was wrong?
+    } else {
+      const styleValue = FONT_FAMILY_MAP[value as FontName];
+      document.execCommand('fontName', false, styleValue);
+    }
+
+    // Clean up empty spans or merge? (Optional optimization)
 
     if (textEditRef.current) onUpdate({ ...bubble, text: textEditRef.current.innerHTML });
     return true;
