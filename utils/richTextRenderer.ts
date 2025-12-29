@@ -127,10 +127,10 @@ function parseRichText(html: string, defaultStyle: TextStyle): TextSegment[] {
 // Helper to determine line height offset based on font size
 function getLineHeightOffset(size: number): number {
     if (size >= 15 && size <= 20) return 6;
-    if (size >= 21 && size <= 25) return 3;
-    if (size >= 26 && size <= 30) return 0;
-    if (size >= 31 && size <= 35) return -3;
-    if (size >= 36 && size <= 40) return -6;
+    if (size >= 21 && size <= 25) return 4;
+    if (size >= 26 && size <= 30) return 1;
+    if (size >= 31 && size <= 35) return -1;
+    if (size >= 36 && size <= 40) return -3;
     return 6; // Default
 }
 

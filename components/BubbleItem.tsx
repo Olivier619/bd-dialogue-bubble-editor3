@@ -578,10 +578,10 @@ export const BubbleItem = forwardRef<BubbleItemHandle, BubbleItemProps>(({ bubbl
   // Calculate custom line height offset based on font size
   const getLineHeightOffset = (size: number) => {
     if (size >= 15 && size <= 20) return 6;
-    if (size >= 21 && size <= 25) return 3;
-    if (size >= 26 && size <= 30) return 0;
-    if (size >= 31 && size <= 35) return -3;
-    if (size >= 36 && size <= 40) return -6;
+    if (size >= 21 && size <= 25) return 4;
+    if (size >= 26 && size <= 30) return 1;
+    if (size >= 31 && size <= 35) return -1;
+    if (size >= 36 && size <= 40) return -3;
     return 6; // Default fallback (same as <20px)
   };
 
