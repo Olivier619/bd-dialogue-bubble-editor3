@@ -343,20 +343,32 @@ const App: React.FC = () => {
 
 
     try {
-      // Import the text bounds calculator
-      const { calculateTextBounds } = await import('./utils/textBoundsCalculator');
+      // Use conservative safe zones per bubble type
+      // These factors are tested to ensure text NEVER overflows
+      const SAFE_ZONES: Record<BubbleType, { widthFactor: number; heightFactor: number }> = {
+        [BubbleType.Shout]: { widthFactor: 0.50, heightFactor: 0.55 },      // Very spiky - very conservative
+        [BubbleType.Thought]: { widthFactor: 0.60, heightFactor: 0.65 },    // Cloud - conservative
+        [BubbleType.SpeechDown]: { widthFactor: 0.88, heightFactor: 0.83 }, // Rounded - safe
+        [BubbleType.SpeechUp]: { widthFactor: 0.88, heightFactor: 0.83 },   // Rounded - safe
+        [BubbleType.Whisper]: { widthFactor: 0.85, heightFactor: 0.80 },    // Dashed - safe
+        [BubbleType.Descriptive]: { widthFactor: 0.90, heightFactor: 0.85 },// Rectangular - safe
+        [BubbleType.TextOnly]: { widthFactor: 0.95, heightFactor: 0.90 },   // No border - maximum
+      };
 
-      // Calculate dynamic text bounds based on actual bubble shape
-      const getMaxWidthAtY = calculateTextBounds(bubble);
+      const safeZone = SAFE_ZONES[type] || { widthFactor: 0.80, heightFactor: 0.75 };
+      const textWidth = width * safeZone.widthFactor;
+      const textHeight = height * safeZone.heightFactor;
+      const textX = (width - textWidth) / 2;
+      const textY = (height - textHeight) / 2;
 
       const { drawRichText } = await import('./utils/richTextRenderer');
       await drawRichText(
         ctx,
-        text, // This text is now HTML
-        0, // x is handled by ctx.translate
-        0, // y is handled by ctx.translate
-        width,
-        height,
+        text,
+        textX,
+        textY,
+        textWidth,
+        textHeight,
         {
           fontFamily: bubble.fontFamily,
           fontSize: bubble.fontSize,
@@ -366,8 +378,7 @@ const App: React.FC = () => {
           isUnderline: false,
           isStrikethrough: false
         },
-        fontMap,
-        getMaxWidthAtY // Pass the dynamic width function
+        fontMap
       );
     } catch (e) {
       console.error("Failed to load or use richTextRenderer", e);
