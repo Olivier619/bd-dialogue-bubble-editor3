@@ -31,13 +31,28 @@ export interface TextFitResult {
  * Calcule les dimensions de la zone de texte utilisable dans une bulle
  */
 export function getTextBounds(bubble: Bubble): { width: number; height: number; x: number; y: number } {
-  // Utiliser le même padding que l'éditeur (10px) pour une cohérence WYSIWYG
-  const padding = 10;
+  // Pour les bulles irrégulières, utiliser des zones de sécurité très conservatrices
+  // Pour les bulles régulières, utiliser un padding standard
+  let textWidth: number;
+  let textHeight: number;
+  let textX: number;
+  let textY: number;
 
-  const textWidth = bubble.width - (padding * 2);
-  const textHeight = bubble.height - (padding * 2);
-  const textX = padding;
-  const textY = padding;
+  if (bubble.type === BubbleType.Shout || bubble.type === BubbleType.Thought) {
+    // Bulles très irrégulières - facteurs très conservateurs
+    const safeZone = SAFE_TEXT_ZONES[bubble.type];
+    textWidth = bubble.width * safeZone.widthFactor;
+    textHeight = bubble.height * safeZone.heightFactor;
+    textX = (bubble.width - textWidth) / 2;
+    textY = (bubble.height - textHeight) / 2;
+  } else {
+    // Bulles régulières - padding standard de 10px
+    const padding = 10;
+    textWidth = bubble.width - (padding * 2);
+    textHeight = bubble.height - (padding * 2);
+    textX = padding;
+    textY = padding;
+  }
 
   return { width: textWidth, height: textHeight, x: textX, y: textY };
 }
