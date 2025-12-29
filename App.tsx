@@ -341,168 +341,170 @@ const App: React.FC = () => {
       'font-arial': 'Arial',
     };
 
-    // Import the text bounds calculator
-    const { calculateTextBounds } = await import('./utils/textBoundsCalculator');
 
-    // Calculate dynamic text bounds based on actual bubble shape
-    const getMaxWidthAtY = calculateTextBounds(bubble);
-
-    const { drawRichText } = await import('./utils/richTextRenderer');
-    await drawRichText(
-      ctx,
-      text, // This text is now HTML
-      0, // x is handled by ctx.translate
-      0, // y is handled by ctx.translate
-      width,
-      height,
-      {
-        fontFamily: bubble.fontFamily,
-        fontSize: bubble.fontSize,
-        textColor: textColor,
-        isBold: false,
-        isItalic: false,
-        isUnderline: false,
-        isStrikethrough: false
-      },
-      fontMap,
-      getMaxWidthAtY // Pass the dynamic width function
-    );
-  } catch (e) {
-    console.error("Failed to load or use richTextRenderer", e);
-  }
-
-  ctx.restore();
-};
-
-const handleSaveProject = useCallback(() => {
-  if (!uploadedImage) {
-    alert("Veuillez télécharger une image avant de sauvegarder le projet.");
-    return;
-  }
-
-  const bubblesWithLatestText = bubblesRef.current.map(bubble => {
-    const bubbleElement = document.querySelector(`[data-bubble-id="${bubble.id}"]`);
-    const textElement = bubbleElement?.querySelector('.bubble-text') as HTMLDivElement | null;
-
-    const currentText = textElement ? textElement.innerHTML : bubble.text;
-
-    return { ...bubble, text: currentText };
-  });
-
-  const projectState = {
-    image: uploadedImage,
-    bubbles: bubblesWithLatestText,
-    toolSettings: toolSettings,
-    nextZIndex: nextZIndex.current,
-    canvasSize: canvasSize,
-    version: "1.1"
-  };
-
-  const jsonString = JSON.stringify(projectState, null, 2);
-  const blob = new Blob([jsonString], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = 'projet-bd.json';
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
-
-  alert("Projet sauvegardé sous `projet-bd.json` !");
-}, [uploadedImage, toolSettings, canvasSize]);
-
-const handleLoadProject = useCallback((file: File) => {
-  const reader = new FileReader();
-  reader.onload = (event) => {
     try {
-      const projectState = JSON.parse(event.target?.result as string);
+      // Import the text bounds calculator
+      const { calculateTextBounds } = await import('./utils/textBoundsCalculator');
 
-      if (!projectState.image || !projectState.bubbles || !projectState.nextZIndex) {
-        throw new Error("Fichier de projet invalide ou corrompu.");
-      }
+      // Calculate dynamic text bounds based on actual bubble shape
+      const getMaxWidthAtY = calculateTextBounds(bubble);
 
-      const defaultBubbleProps = { textColor: '#000000', borderColor: '#000000' };
-
-      setUploadedImage(projectState.image);
-      setBubbles(projectState.bubbles.map((b: Bubble) => ({ ...defaultBubbleProps, ...b })));
-      setToolSettings(prev => ({ ...prev, ...projectState.toolSettings }));
-      nextZIndex.current = projectState.nextZIndex;
-      setCanvasSize(projectState.canvasSize || { width: projectState.image.width / 2, height: projectState.image.height / 2 });
-      setSelectedBubbleId(null);
-
-      alert("Projet chargé avec succès !");
-
-    } catch (error) {
-      console.error("Erreur lors du chargement du projet:", error);
-      alert(`Erreur lors du chargement du projet: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
+      const { drawRichText } = await import('./utils/richTextRenderer');
+      await drawRichText(
+        ctx,
+        text, // This text is now HTML
+        0, // x is handled by ctx.translate
+        0, // y is handled by ctx.translate
+        width,
+        height,
+        {
+          fontFamily: bubble.fontFamily,
+          fontSize: bubble.fontSize,
+          textColor: textColor,
+          isBold: false,
+          isItalic: false,
+          isUnderline: false,
+          isStrikethrough: false
+        },
+        fontMap,
+        getMaxWidthAtY // Pass the dynamic width function
+      );
+    } catch (e) {
+      console.error("Failed to load or use richTextRenderer", e);
     }
+
+    ctx.restore();
   };
-  reader.onerror = () => {
-    alert("Impossible de lire le fichier de projet.");
-  };
-  reader.readAsText(file);
-}, []);
 
-return (
-  <div className="flex flex-col h-screen bg-gray-200">
-    <header className="bg-white shadow-md z-10 flex-shrink-0">
-      <h1 className="text-2xl sm:text-3xl font-bold py-3 text-center text-gray-800 font-['Bangers'] tracking-wide">
-        Éditeur de Bulles de Dialogue
-      </h1>
-    </header>
+  const handleSaveProject = useCallback(() => {
+    if (!uploadedImage) {
+      alert("Veuillez télécharger une image avant de sauvegarder le projet.");
+      return;
+    }
 
-    <div className="flex flex-1 overflow-hidden">
-      <aside className="w-[420px] flex-shrink-0 overflow-y-auto p-4 bg-gray-50 border-r border-gray-300">
-        <Toolbar
-          settings={toolSettings}
-          onImageUpload={handleImageUpload}
-          onSave={handleSaveImage}
-          isSaving={isSaving}
-          onClear={handleClearAll}
-          onSettingChange={handleUpdateToolSettings}
-          selectedBubble={bubbles.find(b => b.id === selectedBubbleId) || null}
-          onSaveProject={handleSaveProject}
-          onLoadProject={handleLoadProject}
-          isProjectLoaded={!!uploadedImage}
-        />
+    const bubblesWithLatestText = bubblesRef.current.map(bubble => {
+      const bubbleElement = document.querySelector(`[data-bubble-id="${bubble.id}"]`);
+      const textElement = bubbleElement?.querySelector('.bubble-text') as HTMLDivElement | null;
 
-        <div className="mt-6 p-4 border border-yellow-300 rounded bg-yellow-50 text-yellow-700 text-sm">
-          <h2 className="text-lg font-semibold mb-2 font-['Bangers']">Instructions Rapides</h2>
-          <ol className="list-decimal pl-5 space-y-1">
-            <li><span className="font-semibold">Téléchargez</span> votre planche ou <span className="font-semibold">Ouvrez</span> un projet existant.</li>
-            <li><span className="font-semibold">Sélectionnez type de bulle</span> et options (police, taille texte, couleurs, etc.).</li>
-            <li><span className="font-semibold">Cliquez sur l'image</span> pour placer une bulle.</li>
-            <li><span className="font-semibold">Cliquez sur une bulle</span> pour la sélectionner (bordure bleue).</li>
-            <li><span className="font-semibold">Glissez</span> une bulle sélectionnée pour la déplacer.</li>
-            <li><span className="font-semibold">Glissez les poignées bleues</span> pour redimensionner.</li>
-            <li><span className="font-semibold">Poignées Orange/Violette</span> sur la queue pour l'ajuster (pointe et base).</li>
-            <li><span className="font-semibold">Cliquez dans le texte</span> pour éditer. <span className="font-semibold">Molette souris</span> pour changer la taille (sélectionnez une partie pour redimensionner localement).</li>
-            <li><span className="font-semibold">Double-cliquez sur la bordure</span> d'une bulle pour la supprimer.</li>
-            <li><span className="font-semibold">Sauvegardez</span> le projet (.json) ou <span className="font-semibold">Exportez</span> en PNG/JPG.</li>
-          </ol>
-        </div>
-      </aside>
+      const currentText = textElement ? textElement.innerHTML : bubble.text;
 
-      <main className="flex-1 flex justify-center items-start p-6 overflow-auto bg-gray-300">
-        <CanvasArea
-          ref={canvasAreaRef}
-          image={uploadedImage}
-          bubbles={bubbles}
-          selectedBubbleId={selectedBubbleId}
-          onAddBubble={handleAddBubble}
-          onSelectBubble={handleSelectBubble}
-          onUpdateBubble={handleUpdateBubble}
-          onDeleteBubble={handleDeleteBubble}
-          isSaving={isSaving}
-          canvasSize={canvasSize}
-          selectedBubbleRef={selectedBubbleRef}
-        />
-      </main>
+      return { ...bubble, text: currentText };
+    });
+
+    const projectState = {
+      image: uploadedImage,
+      bubbles: bubblesWithLatestText,
+      toolSettings: toolSettings,
+      nextZIndex: nextZIndex.current,
+      canvasSize: canvasSize,
+      version: "1.1"
+    };
+
+    const jsonString = JSON.stringify(projectState, null, 2);
+    const blob = new Blob([jsonString], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'projet-bd.json';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    alert("Projet sauvegardé sous `projet-bd.json` !");
+  }, [uploadedImage, toolSettings, canvasSize]);
+
+  const handleLoadProject = useCallback((file: File) => {
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const projectState = JSON.parse(event.target?.result as string);
+
+        if (!projectState.image || !projectState.bubbles || !projectState.nextZIndex) {
+          throw new Error("Fichier de projet invalide ou corrompu.");
+        }
+
+        const defaultBubbleProps = { textColor: '#000000', borderColor: '#000000' };
+
+        setUploadedImage(projectState.image);
+        setBubbles(projectState.bubbles.map((b: Bubble) => ({ ...defaultBubbleProps, ...b })));
+        setToolSettings(prev => ({ ...prev, ...projectState.toolSettings }));
+        nextZIndex.current = projectState.nextZIndex;
+        setCanvasSize(projectState.canvasSize || { width: projectState.image.width / 2, height: projectState.image.height / 2 });
+        setSelectedBubbleId(null);
+
+        alert("Projet chargé avec succès !");
+
+      } catch (error) {
+        console.error("Erreur lors du chargement du projet:", error);
+        alert(`Erreur lors du chargement du projet: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
+      }
+    };
+    reader.onerror = () => {
+      alert("Impossible de lire le fichier de projet.");
+    };
+    reader.readAsText(file);
+  }, []);
+
+  return (
+    <div className="flex flex-col h-screen bg-gray-200">
+      <header className="bg-white shadow-md z-10 flex-shrink-0">
+        <h1 className="text-2xl sm:text-3xl font-bold py-3 text-center text-gray-800 font-['Bangers'] tracking-wide">
+          Éditeur de Bulles de Dialogue
+        </h1>
+      </header>
+
+      <div className="flex flex-1 overflow-hidden">
+        <aside className="w-[420px] flex-shrink-0 overflow-y-auto p-4 bg-gray-50 border-r border-gray-300">
+          <Toolbar
+            settings={toolSettings}
+            onImageUpload={handleImageUpload}
+            onSave={handleSaveImage}
+            isSaving={isSaving}
+            onClear={handleClearAll}
+            onSettingChange={handleUpdateToolSettings}
+            selectedBubble={bubbles.find(b => b.id === selectedBubbleId) || null}
+            onSaveProject={handleSaveProject}
+            onLoadProject={handleLoadProject}
+            isProjectLoaded={!!uploadedImage}
+          />
+
+          <div className="mt-6 p-4 border border-yellow-300 rounded bg-yellow-50 text-yellow-700 text-sm">
+            <h2 className="text-lg font-semibold mb-2 font-['Bangers']">Instructions Rapides</h2>
+            <ol className="list-decimal pl-5 space-y-1">
+              <li><span className="font-semibold">Téléchargez</span> votre planche ou <span className="font-semibold">Ouvrez</span> un projet existant.</li>
+              <li><span className="font-semibold">Sélectionnez type de bulle</span> et options (police, taille texte, couleurs, etc.).</li>
+              <li><span className="font-semibold">Cliquez sur l'image</span> pour placer une bulle.</li>
+              <li><span className="font-semibold">Cliquez sur une bulle</span> pour la sélectionner (bordure bleue).</li>
+              <li><span className="font-semibold">Glissez</span> une bulle sélectionnée pour la déplacer.</li>
+              <li><span className="font-semibold">Glissez les poignées bleues</span> pour redimensionner.</li>
+              <li><span className="font-semibold">Poignées Orange/Violette</span> sur la queue pour l'ajuster (pointe et base).</li>
+              <li><span className="font-semibold">Cliquez dans le texte</span> pour éditer. <span className="font-semibold">Molette souris</span> pour changer la taille (sélectionnez une partie pour redimensionner localement).</li>
+              <li><span className="font-semibold">Double-cliquez sur la bordure</span> d'une bulle pour la supprimer.</li>
+              <li><span className="font-semibold">Sauvegardez</span> le projet (.json) ou <span className="font-semibold">Exportez</span> en PNG/JPG.</li>
+            </ol>
+          </div>
+        </aside>
+
+        <main className="flex-1 flex justify-center items-start p-6 overflow-auto bg-gray-300">
+          <CanvasArea
+            ref={canvasAreaRef}
+            image={uploadedImage}
+            bubbles={bubbles}
+            selectedBubbleId={selectedBubbleId}
+            onAddBubble={handleAddBubble}
+            onSelectBubble={handleSelectBubble}
+            onUpdateBubble={handleUpdateBubble}
+            onDeleteBubble={handleDeleteBubble}
+            isSaving={isSaving}
+            canvasSize={canvasSize}
+            selectedBubbleRef={selectedBubbleRef}
+          />
+        </main>
+      </div>
     </div>
-  </div>
-);
+  );
 };
 
 export default App;
