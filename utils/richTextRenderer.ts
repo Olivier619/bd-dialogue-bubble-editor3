@@ -210,34 +210,73 @@ export async function drawRichText(
             const wordWidth = ctx.measureText(word).width;
 
             // Use width directly - it already represents the usable text area
-            // (padding/safe zones are already applied before calling drawRichText)
             const maxLineWidth = getMaxWidthAtY
                 ? getMaxWidthAtY(currentY)
                 : width;
 
-            // DEBUG: Log wrapping values
-            console.log(`Word: "${word}", wordWidth: ${wordWidth}, maxLineWidth: ${maxLineWidth}, currentLine.width: ${currentLine.width}`);
+            // If the word itself is too long, break it character by character
+            if (wordWidth > maxLineWidth) {
+                let remainingWord = word;
+                while (remainingWord.length > 0) {
+                    let chunk = '';
+                    let chunkWidth = 0;
 
-            if (currentLine.width + wordWidth > maxLineWidth && currentLine.width > 0) {
-                // New line - update Y position
-                console.log(`WRAPPING! Total would be ${currentLine.width + wordWidth} > ${maxLineWidth}`);
-                currentY += currentLine.height || defaultStyle.fontSize * 0.70;
-                lines.push(currentLine);
-                currentLine = { segments: [], width: 0, height: 0 };
+                    // Build chunk character by character
+                    for (let i = 0; i < remainingWord.length; i++) {
+                        const testChunk = chunk + remainingWord[i];
+                        const testWidth = ctx.measureText(testChunk).width;
+
+                        if (currentLine.width + testWidth > maxLineWidth && currentLine.segments.length > 0) {
+                            // Start new line
+                            currentY += currentLine.height || defaultStyle.fontSize * 0.70;
+                            lines.push(currentLine);
+                            currentLine = { segments: [], width: 0, height: 0 };
+                        }
+
+                        if (testWidth <= maxLineWidth || chunk === '') {
+                            chunk = testChunk;
+                            chunkWidth = testWidth;
+                        } else {
+                            break;
+                        }
+                    }
+
+                    // Add chunk to current line
+                    if (chunk) {
+                        currentLine.segments.push({
+                            text: chunk,
+                            style: seg.style,
+                            width: chunkWidth,
+                            height: seg.style.fontSize
+                        });
+                        currentLine.width += chunkWidth;
+                        const lhFactor = seg.style.fontSize <= 15 ? 0.70 : Math.max(0.50, 0.70 - (seg.style.fontSize - 15) * 0.008);
+                        currentLine.height = Math.max(currentLine.height, seg.style.fontSize * lhFactor);
+
+                        remainingWord = remainingWord.substring(chunk.length);
+                    } else {
+                        break; // Safety: avoid infinite loop
+                    }
+                }
+            } else {
+                // Normal word wrapping
+                if (currentLine.width + wordWidth > maxLineWidth && currentLine.width > 0) {
+                    currentY += currentLine.height || defaultStyle.fontSize * 0.70;
+                    lines.push(currentLine);
+                    currentLine = { segments: [], width: 0, height: 0 };
+                }
+
+                // Add to line
+                currentLine.segments.push({
+                    text: word,
+                    style: seg.style,
+                    width: wordWidth,
+                    height: seg.style.fontSize
+                });
+                currentLine.width += wordWidth;
+                const lhFactor = seg.style.fontSize <= 15 ? 0.70 : Math.max(0.50, 0.70 - (seg.style.fontSize - 15) * 0.008);
+                currentLine.height = Math.max(currentLine.height, seg.style.fontSize * lhFactor);
             }
-
-            // Add to line
-            currentLine.segments.push({
-                text: word,
-                style: seg.style,
-                width: wordWidth,
-                height: seg.style.fontSize
-            });
-            currentLine.width += wordWidth;
-            // Dynamic line height: 0.70 for small text, decreasing to 0.50 at 40px
-            // linear interpolation: 0.70 - (size - 15) * (0.20 / 25) = 0.008
-            const lhFactor = seg.style.fontSize <= 15 ? 0.70 : Math.max(0.50, 0.70 - (seg.style.fontSize - 15) * 0.008);
-            currentLine.height = Math.max(currentLine.height, seg.style.fontSize * lhFactor);
         });
     });
     if (currentLine.segments.length > 0) lines.push(currentLine);
