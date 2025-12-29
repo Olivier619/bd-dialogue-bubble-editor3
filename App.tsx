@@ -347,14 +347,22 @@ const App: React.FC = () => {
       let textWidth = width;
       let textHeight = height;
 
-      // Constrain text area for irregular shapes (tighter to stay in white area)
-      if (type === BubbleType.Shout || type === BubbleType.Thought) {
-        const factor = 0.60; // Reduced from 0.75 to ensure text stays inside
-        textWidth = width * factor;
-        textHeight = height * factor;
-        textX = (width - textWidth) / 2;
-        textY = (height - textHeight) / 2;
-      }
+      // Define safe zones per bubble type to keep text within white area
+      const SAFE_ZONES: Record<BubbleType, { widthFactor: number; heightFactor: number }> = {
+        [BubbleType.Shout]: { widthFactor: 0.55, heightFactor: 0.60 },      // Spiky edges
+        [BubbleType.Thought]: { widthFactor: 0.65, heightFactor: 0.70 },    // Cloud shape
+        [BubbleType.SpeechDown]: { widthFactor: 0.90, heightFactor: 0.85 }, // Rounded with tail
+        [BubbleType.SpeechUp]: { widthFactor: 0.90, heightFactor: 0.85 },   // Rounded with tail
+        [BubbleType.Whisper]: { widthFactor: 0.88, heightFactor: 0.83 },    // Dashed rounded
+        [BubbleType.Descriptive]: { widthFactor: 0.92, heightFactor: 0.88 },// Rectangular
+        [BubbleType.TextOnly]: { widthFactor: 1.0, heightFactor: 1.0 },     // No border
+      };
+
+      const safeZone = SAFE_ZONES[type] || { widthFactor: 0.85, heightFactor: 0.85 };
+      textWidth = width * safeZone.widthFactor;
+      textHeight = height * safeZone.heightFactor;
+      textX = (width - textWidth) / 2;
+      textY = (height - textHeight) / 2;
 
       const { drawRichText } = await import('./utils/richTextRenderer');
       await drawRichText(
