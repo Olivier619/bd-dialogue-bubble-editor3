@@ -531,9 +531,9 @@ export const BubbleItem = forwardRef<BubbleItemHandle, BubbleItemProps>(({ bubbl
   const bbox = useMemo(() => getOverallBbox(bubble), [bubble]);
 
   // Calculer les paddings dynamiques en fonction du type de bulle
-    const safeZone = SAFE_TEXT_ZONES[bubble.type] || { widthFactor: 0.80, heightFactor: 0.75 };
-    const paddingH = ((1 - safeZone.widthFactor) / 2) * 100;
-    const paddingV = ((1 - safeZone.heightFactor) / 2) * 100;
+  const safeZone = SAFE_TEXT_ZONES[bubble.type] || { widthFactor: 0.80, heightFactor: 0.75 };
+  const paddingH = ((1 - safeZone.widthFactor) / 2) * 100;
+  const paddingV = ((1 - safeZone.heightFactor) / 2) * 100;
 
   const bubbleStyle: React.CSSProperties = {
     position: 'absolute',
@@ -544,7 +544,7 @@ export const BubbleItem = forwardRef<BubbleItemHandle, BubbleItemProps>(({ bubbl
     zIndex: bubble.zIndex,
     fontFamily: FONT_FAMILY_MAP[bubble.fontFamily],
     fontSize: `${bubble.fontSize}px`,
-        
+
     color: bubble.textColor,
     border: isSelected ? '2px solid #3b82f6' : '2px solid transparent',
     boxSizing: 'content-box',
@@ -575,11 +575,21 @@ export const BubbleItem = forwardRef<BubbleItemHandle, BubbleItemProps>(({ bubbl
     height: `${bbox.height}px`,
   };
 
+  // Calculate custom line height offset based on font size
+  const getLineHeightOffset = (size: number) => {
+    if (size >= 15 && size <= 20) return 6;
+    if (size >= 21 && size <= 25) return 3;
+    if (size >= 26 && size <= 30) return 0;
+    if (size >= 31 && size <= 35) return -3;
+    if (size >= 36 && size <= 40) return -6;
+    return 6; // Default fallback (same as <20px)
+  };
+
   const textEditStyle: React.CSSProperties = {
     outline: 'none',
     cursor: isEditingText ? 'text' : 'move',
     width: '100%',
-    lineHeight: '1.4',
+    lineHeight: `calc(1em + ${getLineHeightOffset(bubble.fontSize)}px)`,
     wordWrap: 'break-word',
     overflowWrap: 'break-word',
   };
