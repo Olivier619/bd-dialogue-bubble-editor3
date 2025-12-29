@@ -653,7 +653,7 @@ export const BubbleItem = forwardRef<BubbleItemHandle, BubbleItemProps>(({ bubbl
                   onTouchStart={(e) => { e.stopPropagation(); handleBubbleMouseDown(e as any, 'move-tail-tip', undefined, tail.id); }}
                 />
                 <circle
-                  cx={worldBaseCX - bubble.x - offsetX}
+                  cx={worldBaseCX - bubble.x - offsetX + 10}
                   cy={worldBaseCY - bubble.y - offsetY}
                   r={TAIL_BASE_HANDLE_RADIUS}
                   fill="purple"

@@ -33,7 +33,22 @@ const App: React.FC = () => {
 
   useEffect(() => {
     if (uploadedImage) {
-      setCanvasSize({ width: uploadedImage.width / 2, height: uploadedImage.height / 2 });
+      // Smart scaling to fit screen
+      const maxWidth = window.innerWidth * 0.9; // 90% of screen width
+      const maxHeight = window.innerHeight * 0.8; // 80% of screen height (account for headers)
+
+      const scaleX = maxWidth / uploadedImage.width;
+      const scaleY = maxHeight / uploadedImage.height;
+
+      // Use the smaller scale to ensure it fits both dimensions, but limit to 1.0 (don't upscale) or allow zoom? 
+      // Usually reducing huge images is the goal.
+      // Let's cap max scale at 1.0 to avoid blurry upscaling of small images, but usually comic pages are huge.
+      const scale = Math.min(scaleX, scaleY, 1.0); // Remove 1.0 cap if you want to zoom up small images
+
+      setCanvasSize({
+        width: Math.floor(uploadedImage.width * scale),
+        height: Math.floor(uploadedImage.height * scale)
+      });
     } else {
       setCanvasSize({ width: 800, height: 600 });
     }
@@ -327,14 +342,28 @@ const App: React.FC = () => {
     };
 
     try {
+      let textX = 0;
+      let textY = 0;
+      let textWidth = width;
+      let textHeight = height;
+
+      // Constrain text area for irregular shapes
+      if (type === BubbleType.Shout || type === BubbleType.Thought) {
+        const factor = 0.75;
+        textWidth = width * factor;
+        textHeight = height * factor;
+        textX = (width - textWidth) / 2;
+        textY = (height - textHeight) / 2;
+      }
+
       const { drawRichText } = await import('./utils/richTextRenderer');
       await drawRichText(
         ctx,
         text, // This text is now HTML
-        0, // x is handled by ctx.translate
-        0, // y is handled by ctx.translate
-        width,
-        height,
+        textX, // Adjusted X
+        textY, // Adjusted Y
+        textWidth, // Adjusted Width
+        textHeight, // Adjusted Height
         {
           fontFamily: bubble.fontFamily,
           fontSize: bubble.fontSize,
@@ -456,7 +485,8 @@ const App: React.FC = () => {
               <li><span className="font-semibold">Cliquez sur une bulle</span> pour la sélectionner (bordure bleue).</li>
               <li><span className="font-semibold">Glissez</span> une bulle sélectionnée pour la déplacer.</li>
               <li><span className="font-semibold">Glissez les poignées bleues</span> pour redimensionner.</li>
-              <li><span className="font-semibold">Cliquez dans le texte</span> d'une bulle sélectionnée pour l'éditer.</li>
+              <li><span className="font-semibold">Poignées Orange/Violette</span> sur la queue pour l'ajuster (pointe et base).</li>
+              <li><span className="font-semibold">Cliquez dans le texte</span> pour éditer. <span className="font-semibold">Molette souris</span> pour changer la taille (sélectionnez une partie pour redimensionner localement).</li>
               <li><span className="font-semibold">Double-cliquez sur la bordure</span> d'une bulle pour la supprimer.</li>
               <li><span className="font-semibold">Sauvegardez</span> le projet (.json) ou <span className="font-semibold">Exportez</span> en PNG/JPG.</li>
             </ol>

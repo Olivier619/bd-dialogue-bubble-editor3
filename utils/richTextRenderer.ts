@@ -221,14 +221,17 @@ export async function drawRichText(
                 height: seg.style.fontSize
             });
             currentLine.width += wordWidth;
-            currentLine.height = Math.max(currentLine.height, seg.style.fontSize * 1.2); // 1.2 line height factor
+            // Dynamic line height: 0.70 for small text, decreasing to 0.50 at 40px
+            // linear interpolation: 0.70 - (size - 15) * (0.20 / 25) = 0.008
+            const lhFactor = seg.style.fontSize <= 15 ? 0.70 : Math.max(0.50, 0.70 - (seg.style.fontSize - 15) * 0.008);
+            currentLine.height = Math.max(currentLine.height, seg.style.fontSize * lhFactor);
         });
     });
     if (currentLine.segments.length > 0) lines.push(currentLine);
 
 
     // 5. Vertical Alignment (Center)
-    const totalHeight = lines.reduce((acc, line) => acc + (line.height || defaultStyle.fontSize * 1.2), 0);
+    const totalHeight = lines.reduce((acc, line) => acc + (line.height), 0);
     const startY = y + (height - totalHeight) / 2;
 
     // 6. Draw
