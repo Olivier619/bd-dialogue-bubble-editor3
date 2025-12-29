@@ -4,6 +4,7 @@ import { CanvasArea } from './components/CanvasArea.tsx';
 import { Bubble, BubblePart, BubbleType, FontName, ToolSettings, MIN_BUBBLE_WIDTH, MIN_BUBBLE_HEIGHT, MIN_TAIL_LENGTH, MIN_TAIL_BASE_WIDTH, MIN_DOT_COUNT, MIN_DOT_SIZE, BUBBLE_REQUIRES_PARTS, SpeechTailPart, ThoughtDotPart } from './types.ts';
 import { BubbleItemHandle } from './components/BubbleItem.tsx';
 import { generateBubblePaths } from './utils/bubbleUtils';
+import { SAFE_TEXT_ZONES, getTextBounds } from './utils/textAutoFit';
 
 const App: React.FC = () => {
   const [uploadedImage, setUploadedImage] = useState<{ url: string; width: number; height: number } | null>(null);
@@ -343,24 +344,12 @@ const App: React.FC = () => {
 
 
     try {
-      // Use conservative safe zones per bubble type
-      // These factors are tested to ensure text NEVER overflows
-      const SAFE_ZONES: Record<BubbleType, { widthFactor: number; heightFactor: number }> = {
-        [BubbleType.Shout]: { widthFactor: 0.50, heightFactor: 0.55 },      // Very spiky - very conservative
-        [BubbleType.Thought]: { widthFactor: 0.60, heightFactor: 0.65 },    // Cloud - conservative
-        [BubbleType.SpeechDown]: { widthFactor: 0.88, heightFactor: 0.83 }, // Rounded - safe
-        [BubbleType.SpeechUp]: { widthFactor: 0.88, heightFactor: 0.83 },   // Rounded - safe
-        [BubbleType.Whisper]: { widthFactor: 0.85, heightFactor: 0.80 },    // Dashed - safe
-        [BubbleType.Descriptive]: { widthFactor: 0.90, heightFactor: 0.85 },// Rectangular - safe
-        [BubbleType.TextOnly]: { widthFactor: 0.95, heightFactor: 0.90 },   // No border - maximum
-      };
-
-      const safeZone = SAFE_ZONES[type] || { widthFactor: 0.80, heightFactor: 0.75 };
-      const textWidth = width * safeZone.widthFactor;
-      const textHeight = height * safeZone.heightFactor;
-      const textX = (width - textWidth) / 2;
-      const textY = (height - textHeight) / 2;
-
+      // Utiliser le nouveau système de calcul des limites de texte
+      const textBounds = getTextBounds({ ...bubble, type, width, height });
+      const textWidth = textBounds.width;
+      const textHeight = textBounds.height;
+      const textX = textBounds.x;
+      const textY = textBounds.y;
       const { drawRichText } = await import('./utils/richTextRenderer');
       await drawRichText(
         ctx,
