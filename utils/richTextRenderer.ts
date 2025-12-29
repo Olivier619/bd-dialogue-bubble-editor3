@@ -133,7 +133,8 @@ export async function drawRichText(
     width: number,
     height: number,
     defaultStyle: TextStyle,
-    fontMap: Record<string, string>
+    fontMap: Record<string, string>,
+    getMaxWidthAtY?: (y: number) => number
 ) {
     // 1. Parsing
     let segments = parseRichText(html, defaultStyle);
@@ -177,7 +178,8 @@ export async function drawRichText(
     // 4. Line Wrapping
     const lines: TextLine[] = [];
     let currentLine: TextLine = { segments: [], width: 0, height: 0 };
-    const maxLineWidth = width - 20; // padding
+    let currentY = 0; // Track current Y position for dynamic width
+    const basePadding = 20;
 
     segments.forEach(seg => {
         if (seg.text === '\n') {
@@ -207,8 +209,14 @@ export async function drawRichText(
 
             const wordWidth = ctx.measureText(word).width;
 
+            // Calculate max width for current line position
+            const maxLineWidth = getMaxWidthAtY
+                ? getMaxWidthAtY(currentY) - basePadding
+                : width - basePadding;
+
             if (currentLine.width + wordWidth > maxLineWidth && currentLine.width > 0) {
-                // New line
+                // New line - update Y position
+                currentY += currentLine.height || defaultStyle.fontSize * 0.70;
                 lines.push(currentLine);
                 currentLine = { segments: [], width: 0, height: 0 };
             }
@@ -235,7 +243,7 @@ export async function drawRichText(
     const startY = y + (height - totalHeight) / 2;
 
     // 6. Draw
-    let currentY = startY;
+    let drawY = startY;
 
     lines.forEach(line => {
         // Horizontal Center Alignment for each line
@@ -254,7 +262,7 @@ export async function drawRichText(
         // Approximation: line.height is roughly the max fontSize * 1.2.
         // We can draw at currentY + line.height * 0.8 (baseline approx).
 
-        const baselineY = currentY + line.height * 0.8;
+        const baselineY = drawY + line.height * 0.8;
 
         line.segments.forEach(seg => {
             if (!seg.text) return;
@@ -286,7 +294,7 @@ export async function drawRichText(
             currentX += seg.width;
         });
 
-        currentY += line.height;
+        drawY += line.height;
     });
 
     ctx.restore();
