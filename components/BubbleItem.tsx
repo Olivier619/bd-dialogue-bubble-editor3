@@ -99,6 +99,15 @@ export const BubbleItem = forwardRef<BubbleItemHandle, BubbleItemProps>(({ bubbl
 
           fontEl.parentNode?.replaceChild(span, fontEl);
           replaced = true;
+
+          // Restore selection to the new span content so resizing continues smoothly
+          const newRange = document.createRange();
+          newRange.selectNodeContents(span);
+          const selection = window.getSelection();
+          if (selection) {
+            selection.removeAllRanges();
+            selection.addRange(newRange);
+          }
         }
       });
 
