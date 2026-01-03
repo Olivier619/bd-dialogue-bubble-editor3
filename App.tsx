@@ -256,9 +256,11 @@ const App: React.FC = () => {
       const ctx = tempCanvas.getContext('2d');
       if (!ctx) throw new Error("Impossible de créer le contexte canvas");
 
-      tempCanvas.width = canvasSize.width * 2;
-      tempCanvas.height = canvasSize.height * 2;
-      ctx.scale(2, 2);
+      // Utiliser la résolution d'origine de l'image pour l'export
+      const exportScale = uploadedImage.width / canvasSize.width;
+      tempCanvas.width = uploadedImage.width;
+      tempCanvas.height = uploadedImage.height;
+      ctx.scale(exportScale, exportScale);
 
       // Dessiner l'image de fond
       const img = new Image();
