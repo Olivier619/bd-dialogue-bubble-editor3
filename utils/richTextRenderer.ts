@@ -1,3 +1,5 @@
+import { getLineHeightOffset } from './textAutoFit';
+
 export interface TextStyle {
     fontFamily: string;
     fontSize: number;
@@ -71,21 +73,23 @@ function parseRichText(html: string, defaultStyle: TextStyle): TextSegment[] {
                 if (!isNaN(size)) {
                     newStyle.fontSize = size;
                 }
-            } else if (element.getAttribute('size')) {
-                // Handle legacy font size attribute if necessary (though we try to remove it in BubbleItem)
-                // Mapping 1-7 to px is approximate, usually 1=10px, 2=13px, 3=16px etc. 
-                // But our BubbleItem sets explicit px size usually.
             }
 
-            // Handle font family
+            // Handle font family from style or legacy 'face' attribute
+            const face = element.getAttribute('face');
             if (element.style.fontFamily) {
-                // strip quotes
-                newStyle.fontFamily = element.style.fontFamily.replace(/['"]/g, '');
+                // strip quotes and handle comma separated lists by taking the first font
+                newStyle.fontFamily = element.style.fontFamily.split(',')[0].replace(/['"]/g, '').trim();
+            } else if (face) {
+                newStyle.fontFamily = face.split(',')[0].replace(/['"]/g, '').trim();
             }
 
-            // Handle color
+            // Handle color from style or legacy 'color' attribute
+            const colorAttr = element.getAttribute('color');
             if (element.style.color) {
                 newStyle.textColor = element.style.color;
+            } else if (colorAttr) {
+                newStyle.textColor = colorAttr;
             }
 
             // Recursive traversal
@@ -124,15 +128,6 @@ function parseRichText(html: string, defaultStyle: TextStyle): TextSegment[] {
     return segments;
 }
 
-// Helper to determine line height offset based on font size
-function getLineHeightOffset(size: number): number {
-    if (size >= 15 && size <= 20) return 6;
-    if (size >= 21 && size <= 25) return 4;
-    if (size >= 26 && size <= 30) return 1;
-    if (size >= 31 && size <= 35) return -1;
-    if (size >= 36 && size <= 40) return -3;
-    return 6; // Default
-}
 
 
 export async function drawRichText(
@@ -170,8 +165,8 @@ export async function drawRichText(
     segments.forEach(seg => {
         if (seg.text === '\n') return;
 
-        let fontName = fontMap[seg.style.fontFamily] || seg.style.fontFamily || 'Arial';
-        if (!fontName.includes(',')) fontName = `'${fontName}'`; // quote if needed, though map handles it
+        let fontName = fontMap[seg.style.fontFamily] || seg.style.fontFamily || 'Arial, sans-serif';
+        if (!fontName.includes(',') && !fontName.startsWith("'")) fontName = `'${fontName}'`;
 
         // Construct font string
         let fontStr = '';
@@ -210,7 +205,7 @@ export async function drawRichText(
             // Better: measure each word properly.
 
             // Re-set font for accurate measure
-            let fontName = fontMap[seg.style.fontFamily] || seg.style.fontFamily || 'Arial';
+            let fontName = fontMap[seg.style.fontFamily] || seg.style.fontFamily || 'Arial, sans-serif';
             let fontStr = '';
             if (seg.style.isItalic) fontStr += 'italic ';
             if (seg.style.isBold) fontStr += 'bold ';
@@ -316,7 +311,8 @@ export async function drawRichText(
         // Approximation: line.height is roughly the max fontSize * 1.2.
         // We can draw at currentY + line.height * 0.8 (baseline approx).
 
-        const baselineY = drawY + line.height * 0.8;
+        // Perfect middle centering
+        const baselineY = drawY + line.height / 2;
 
         line.segments.forEach(seg => {
             if (!seg.text) return;
@@ -330,7 +326,7 @@ export async function drawRichText(
 
             ctx.font = fontStr;
             ctx.fillStyle = seg.style.textColor;
-            ctx.textBaseline = 'alphabetic';
+            ctx.textBaseline = 'middle';
 
             ctx.fillText(seg.text, currentX, baselineY);
 

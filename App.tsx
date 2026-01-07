@@ -90,7 +90,7 @@ const App: React.FC = () => {
 
     const newBubbleId = `bubble-${Date.now()}`;
     const initialWidth = 150;
-    const initialHeight = initialWidth * 0.6;
+    const initialHeight = initialWidth * 0.3; // Plus compact au départ (env. 45px)
 
     const bubbleX = Math.max(0, Math.min(x - initialWidth / 2, canvasSize.width - initialWidth));
     const bubbleY = Math.max(0, Math.min(y - initialHeight / 2, canvasSize.height - initialHeight));
@@ -337,11 +337,11 @@ const App: React.FC = () => {
 
     // Dessiner le texte en utilisant le rendu riche
     const fontMap: Record<string, string> = {
-      'font-comic': 'Comic Neue',
-      'font-bangers': 'Bangers',
-      'font-indie': 'Indie Flower',
-      'font-marker': 'Permanent Marker',
-      'font-arial': 'Arial',
+      'font-comic': "'Comic Neue', cursive",
+      'font-bangers': "'Bangers', cursive",
+      'font-indie': "'Indie Flower', cursive",
+      'font-marker': "'Permanent Marker', cursive",
+      'font-arial': "Arial, sans-serif",
     };
 
 

@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo, forwardRef, useImperativeHandle } from 'react';
 import { Bubble, BubblePart, MIN_BUBBLE_WIDTH, MIN_BUBBLE_HEIGHT, FONT_FAMILY_MAP, BubbleType, FontName, SpeechTailPart, ThoughtDotPart } from '../types.ts';
 import { generateBubblePaths, getOverallBbox } from '../utils/bubbleUtils';
-import { detectTextOverflow, getTextBounds, SAFE_TEXT_ZONES } from '../utils/textAutoFit';
+import { detectTextOverflow, getTextBounds, SAFE_TEXT_ZONES, getLineHeightOffset } from '../utils/textAutoFit';
 
 
 interface BubbleItemProps {
@@ -561,7 +561,10 @@ export const BubbleItem = forwardRef<BubbleItemHandle, BubbleItemProps>(({ bubbl
     left: 0,
     width: '100%',
     height: '100%',
-    padding: `${paddingV}% ${paddingH}%`,
+    paddingTop: `${(bubble.height * (1 - safeZone.heightFactor)) / 2}px`,
+    paddingBottom: `${(bubble.height * (1 - safeZone.heightFactor)) / 2}px`,
+    paddingLeft: `${(bubble.width * (1 - safeZone.widthFactor)) / 2}px`,
+    paddingRight: `${(bubble.width * (1 - safeZone.widthFactor)) / 2}px`,
     cursor: isEditingText ? 'text' : 'move',
     textAlign: 'center',
   };
@@ -575,15 +578,6 @@ export const BubbleItem = forwardRef<BubbleItemHandle, BubbleItemProps>(({ bubbl
     height: `${bbox.height}px`,
   };
 
-  // Calculate custom line height offset based on font size
-  const getLineHeightOffset = (size: number) => {
-    if (size >= 15 && size <= 20) return 6;
-    if (size >= 21 && size <= 25) return 4;
-    if (size >= 26 && size <= 30) return 1;
-    if (size >= 31 && size <= 35) return -1;
-    if (size >= 36 && size <= 40) return -3;
-    return 6; // Default fallback (same as <20px)
-  };
 
   const textEditStyle: React.CSSProperties = {
     outline: 'none',

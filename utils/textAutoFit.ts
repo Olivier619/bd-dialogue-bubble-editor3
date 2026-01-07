@@ -7,14 +7,32 @@ import { Bubble, BubbleType } from '../types';
  * heightFactor: pourcentage de la hauteur totale utilisable pour le texte
  */
 export const SAFE_TEXT_ZONES: Record<BubbleType, { widthFactor: number; heightFactor: number }> = {
-  [BubbleType.Shout]: { widthFactor: 0.50, heightFactor: 0.55 },        // Bulles éclair - très prudent
-  [BubbleType.Thought]: { widthFactor: 0.50, heightFactor: 0.65 },      // Nuages de pensée
-  [BubbleType.SpeechDown]: { widthFactor: 0.83, heightFactor: 0.83 },  // Dialogue classique
-  [BubbleType.SpeechUp]: { widthFactor: 0.83, heightFactor: 0.83 },    // Dialogue vers le haut
-  [BubbleType.Whisper]: { widthFactor: 0.80, heightFactor: 0.80 },     // Chuchotement
-  [BubbleType.Descriptive]: { widthFactor: 0.90, heightFactor: 0.85 },  // Rectangulaire
-  [BubbleType.TextOnly]: { widthFactor: 0.95, heightFactor: 0.90 },     // Texte seul - maximum
+  [BubbleType.Shout]: { widthFactor: 0.50, heightFactor: 0.775 },       // Bulles éclair - réduit marge verticale par 2
+  [BubbleType.Thought]: { widthFactor: 0.50, heightFactor: 0.825 },     // Nuages de pensée - réduit marge verticale par 2
+  [BubbleType.SpeechDown]: { widthFactor: 0.83, heightFactor: 0.915 }, // Dialogue classique - réduit marge verticale par 2
+  [BubbleType.SpeechUp]: { widthFactor: 0.83, heightFactor: 0.915 },   // Dialogue vers le haut - réduit marge verticale par 2
+  [BubbleType.Whisper]: { widthFactor: 0.80, heightFactor: 0.90 },    // Chuchotement - réduit marge verticale par 2
+  [BubbleType.Descriptive]: { widthFactor: 0.90, heightFactor: 0.925 }, // Rectangulaire - réduit marge verticale par 2
+  [BubbleType.TextOnly]: { widthFactor: 0.95, heightFactor: 0.95 },    // Texte seul - réduit marge verticale par 2
 };
+
+/**
+ * Calcule l'interligne (l'espace supplémentaire entre les lignes) dynamiquement
+ * selon le barème de l'utilisateur :
+ * 5px: -20% (gap=4px), 10px: -30% (gap=7px), ..., 40px: -60% (gap=16px)
+ */
+export function getLineHeightOffset(size: number): number {
+  let reduction: number;
+  if (size < 10) {
+    // Entre 5px (0.2) et 10px (0.3)
+    reduction = 0.2 + (size - 5) * 0.02;
+  } else {
+    // Entre 10px (0.3) et 40px (0.6) avec 1% d'augmentation par pixel
+    reduction = 0.3 + (size - 10) * 0.01;
+  }
+  // L'offset est le gap entre les lignes
+  return size * (1 - Math.min(0.8, reduction));
+}
 
 /**
  * Interface pour les résultats du calcul d'auto-ajustement
@@ -31,30 +49,14 @@ export interface TextFitResult {
  * Calcule les dimensions de la zone de texte utilisable dans une bulle
  */
 export function getTextBounds(bubble: Bubble): { width: number; height: number; x: number; y: number } {
-  // Pour les bulles irrégulières, utiliser des zones de sécurité très conservatrices
-  // Pour les bulles régulières, utiliser un padding standard
-  let textWidth: number;
-  let textHeight: number;
-  let textX: number;
-  let textY: number;
+  const safeZone = SAFE_TEXT_ZONES[bubble.type] || { widthFactor: 0.80, heightFactor: 0.75 };
 
-  if (bubble.type === BubbleType.Shout || bubble.type === BubbleType.Thought) {
-    // Bulles très irrégulières - facteurs très conservateurs
-    const safeZone = SAFE_TEXT_ZONES[bubble.type];
-    textWidth = bubble.width * safeZone.widthFactor;
-    textHeight = bubble.height * safeZone.heightFactor;
-    textX = (bubble.width - textWidth) / 2;
-    textY = (bubble.height - textHeight) / 2;
-  } else {
-    // Bulles régulières - padding standard de 10px
-    const padding = 10;
-    textWidth = bubble.width - (padding * 2);
-    textHeight = bubble.height - (padding * 2);
-    textX = padding;
-    textY = padding;
-  }
+  const width = bubble.width * safeZone.widthFactor;
+  const height = bubble.height * safeZone.heightFactor;
+  const x = (bubble.width - width) / 2;
+  const y = (bubble.height - height) / 2;
 
-  return { width: textWidth, height: textHeight, x: textX, y: textY };
+  return { width, height, x, y };
 }
 
 /**
@@ -100,7 +102,7 @@ export function measureText(
     lines.push(currentLine);
   }
 
-  const lineHeight = fontSize * 1.4; // line-height: 1.4 comme dans BubbleItem
+  const lineHeight = fontSize + getLineHeightOffset(fontSize);
   const totalHeight = lines.length * lineHeight;
   const maxLineWidth = Math.max(...lines.map(line => ctx.measureText(line).width));
 
