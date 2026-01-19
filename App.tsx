@@ -1,58 +1,51 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-
 import { Toolbar } from './components/Toolbar.tsx';
-
 import { CanvasArea } from './components/CanvasArea.tsx';
-
-import { Bubble, BubblePart, BubbleType, FontName, ToolSettings, MIN_BUBBLE_WIDTH, MIN_BUBBLE_HEIGHT, MIN_TAIL_LENGTH, MIN_TAIL_BASE_WIDTH, MIN_DOT_COUNT, MIN_DOT_SIZE, MIN_BORDER_WIDTH, MAX_BORDER_WIDTH, BUBBLE_REQUIRES_PARTS, SpeechTailPart, ThoughtDotPart } from './types.ts';
-
+import { Bubble, BubblePart, BubbleType, FontName, ToolSettings, MIN_BUBBLE_WIDTH, MIN_BUBBLE_HEIGHT, MIN_TAIL_LENGTH, MIN_TAIL_BASE_WIDTH, MIN_DOT_COUNT, MIN_DOT_SIZE, BUBBLE_REQUIRES_PARTS, SpeechTailPart, ThoughtDotPart } from './types.ts';
 import { BubbleItemHandle } from './components/BubbleItem.tsx';
-
 import { generateBubblePaths } from './utils/bubbleUtils';
-
 import { SAFE_TEXT_ZONES, getTextBounds } from './utils/textAutoFit';
 
 const App: React.FC = () => {
   const [uploadedImage, setUploadedImage] = useState<{ url: string; width: number; height: number } | null>(null);
-
   const [bubbles, setBubbles] = useState<Bubble[]>([]);
-
   const [selectedBubbleId, setSelectedBubbleId] = useState<string | null>(null);
-
   const [toolSettings, setToolSettings] = useState<ToolSettings>({
     activeBubbleType: BubbleType.SpeechDown,
     activeFontFamily: FontName.Comic,
     activeFontSize: 12,
     activeTextColor: '#000000',
     activeBorderColor: '#000000',
-    activeBorderWidth: 2,
     defaultTailLength: 30,
     defaultTailBaseWidth: 20,
     defaultDotCount: 4,
     defaultDotSize: 15,
+
   });
-
   const [isSaving, setIsSaving] = useState(false);
-
   const [canvasSize, setCanvasSize] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
-
   const nextZIndex = useRef(10);
-
   const selectedBubbleRef = useRef<BubbleItemHandle>(null);
 
   const bubblesRef = useRef(bubbles);
-
   useEffect(() => {
     bubblesRef.current = bubbles;
   }, [bubbles]);
 
   useEffect(() => {
     if (uploadedImage) {
-      const maxWidth = window.innerWidth * 0.9;
-      const maxHeight = window.innerHeight * 0.8;
+      // Smart scaling to fit screen
+      const maxWidth = window.innerWidth * 0.9; // 90% of screen width
+      const maxHeight = window.innerHeight * 0.8; // 80% of screen height (account for headers)
+
       const scaleX = maxWidth / uploadedImage.width;
       const scaleY = maxHeight / uploadedImage.height;
-      const scale = Math.min(scaleX, scaleY, 1.0);
+
+      // Use the smaller scale to ensure it fits both dimensions, but limit to 1.0 (don't upscale) or allow zoom? 
+      // Usually reducing huge images is the goal.
+      // Let's cap max scale at 1.0 to avoid blurry upscaling of small images, but usually comic pages are huge.
+      const scale = Math.min(scaleX, scaleY, 1.0); // Remove 1.0 cap if you want to zoom up small images
+
       setCanvasSize({
         width: Math.floor(uploadedImage.width * scale),
         height: Math.floor(uploadedImage.height * scale)
@@ -72,7 +65,6 @@ const App: React.FC = () => {
           activeFontSize: selectedBubble.fontSize,
           activeTextColor: selectedBubble.textColor,
           activeBorderColor: selectedBubble.borderColor,
-          activeBorderWidth: selectedBubble.borderWidth,
         }));
       }
     }
@@ -98,18 +90,18 @@ const App: React.FC = () => {
 
     const newBubbleId = `bubble-${Date.now()}`;
     const initialWidth = 150;
-    const initialHeight = initialWidth * 0.6;
+    const initialHeight = initialWidth * 0.3; // Plus compact au départ (env. 45px)
+
     const bubbleX = Math.max(0, Math.min(x - initialWidth / 2, canvasSize.width - initialWidth));
     const bubbleY = Math.max(0, Math.min(y - initialHeight / 2, canvasSize.height - initialHeight));
 
     const newParts: BubblePart[] = [];
-
     if (BUBBLE_REQUIRES_PARTS.includes(toolSettings.activeBubbleType)) {
       const baseCX = initialWidth / 2;
       const currentDefaultTailBaseWidth = Math.max(MIN_TAIL_BASE_WIDTH, toolSettings.defaultTailBaseWidth);
       const currentDefaultTailLength = Math.max(MIN_TAIL_LENGTH, toolSettings.defaultTailLength);
 
-      if (toolSettings.activeBubbleType === BubbleType.SpeechDown || toolSettings.activeBubbleType === BubbleType.SpeechDownMinimal || toolSettings.activeBubbleType === BubbleType.Whisper) {
+      if (toolSettings.activeBubbleType === BubbleType.SpeechDown || toolSettings.activeBubbleType === BubbleType.Whisper) {
         const baseCY = initialHeight;
         newParts.push({
           id: `part-${Date.now()}`, type: 'speech-tail',
@@ -121,7 +113,7 @@ const App: React.FC = () => {
           initialLength: currentDefaultTailLength,
           initialBaseWidth: currentDefaultTailBaseWidth,
         } as SpeechTailPart);
-      } else if (toolSettings.activeBubbleType === BubbleType.SpeechUp || toolSettings.activeBubbleType === BubbleType.SpeechUpMinimal) {
+      } else if (toolSettings.activeBubbleType === BubbleType.SpeechUp) {
         const baseCY = 0;
         newParts.push({
           id: `part-${Date.now()}`, type: 'speech-tail',
@@ -138,7 +130,6 @@ const App: React.FC = () => {
         const baseDotSize = Math.max(MIN_DOT_SIZE, toolSettings.defaultDotSize);
         const startOffsetX = initialWidth / 2;
         const startOffsetY = initialHeight;
-
         for (let i = 0; i < numDots; i++) {
           const size = Math.max(MIN_DOT_SIZE, baseDotSize - i * (baseDotSize / Math.max(1, numDots - 1) * 0.5));
           newParts.push({
@@ -163,11 +154,9 @@ const App: React.FC = () => {
       fontSize: toolSettings.activeFontSize,
       textColor: toolSettings.activeTextColor,
       borderColor: toolSettings.activeBorderColor,
-      borderWidth: toolSettings.activeBorderWidth,
       zIndex: nextZIndex.current++,
       parts: newParts,
     };
-
     setBubbles(prev => [...prev, newBubble]);
     setSelectedBubbleId(newBubbleId);
   }, [uploadedImage, toolSettings, canvasSize, nextZIndex]);
@@ -192,7 +181,6 @@ const App: React.FC = () => {
         activeFontSize: updatedBubble.fontSize,
         activeTextColor: updatedBubble.textColor,
         activeBorderColor: updatedBubble.borderColor,
-        activeBorderWidth: updatedBubble.borderWidth,
       }));
     }
   }, [selectedBubbleId]);
@@ -206,15 +194,12 @@ const App: React.FC = () => {
 
   const handleUpdateToolSettings = useCallback((newSettings: Partial<ToolSettings>) => {
     setToolSettings(prev => ({ ...prev, ...newSettings }));
-
     if (selectedBubbleId) {
       let appliedToSelection = false;
-
       if (selectedBubbleRef.current) {
         if (newSettings.activeFontFamily) {
           appliedToSelection = selectedBubbleRef.current.applyStyleToSelection('fontFamily', newSettings.activeFontFamily);
         }
-
         if (newSettings.activeFontSize) {
           appliedToSelection = selectedBubbleRef.current.applyStyleToSelection('fontSize', newSettings.activeFontSize);
         }
@@ -222,12 +207,10 @@ const App: React.FC = () => {
 
       if (!appliedToSelection) {
         const updates: Partial<Bubble> = {};
-
         if (newSettings.activeFontFamily) updates.fontFamily = newSettings.activeFontFamily;
         if (newSettings.activeFontSize) updates.fontSize = newSettings.activeFontSize;
         if (newSettings.activeTextColor) updates.textColor = newSettings.activeTextColor;
         if (newSettings.activeBorderColor) updates.borderColor = newSettings.activeBorderColor;
-        if (newSettings.activeBorderWidth) updates.borderWidth = newSettings.activeBorderWidth;
 
         if (Object.keys(updates).length > 0) {
           setBubbles(prev => prev.map(b => b.id === selectedBubbleId ? { ...b, ...updates } : b));
@@ -268,29 +251,34 @@ const App: React.FC = () => {
         return;
       }
 
+      // Créer un canvas temporaire
       const tempCanvas = document.createElement('canvas');
       const ctx = tempCanvas.getContext('2d');
       if (!ctx) throw new Error("Impossible de créer le contexte canvas");
 
-      tempCanvas.width = canvasSize.width * 2;
-      tempCanvas.height = canvasSize.height * 2;
-      ctx.scale(2, 2);
+      // Utiliser la résolution d'origine de l'image pour l'export
+      const exportScale = uploadedImage.width / canvasSize.width;
+      tempCanvas.width = uploadedImage.width;
+      tempCanvas.height = uploadedImage.height;
+      ctx.scale(exportScale, exportScale);
 
+      // Dessiner l'image de fond
       const img = new Image();
       img.src = uploadedImage.url;
-
       await new Promise((resolve, reject) => {
         img.onload = resolve;
         img.onerror = reject;
       });
-
       ctx.drawImage(img, 0, 0, canvasSize.width, canvasSize.height);
 
+      // Dessiner chaque bulle manuellement
       for (const bubble of bubblesRef.current.sort((a, b) => a.zIndex - b.zIndex)) {
+        // Récupérer le texte actuel
         const bubbleElement = document.querySelector(`[data-bubble-id="${bubble.id}"]`);
         const textElement = bubbleElement?.querySelector('.bubble-text') as HTMLDivElement | null;
         const currentText = textElement ? textElement.innerHTML : bubble.text;
 
+        // Dessiner la bulle et son contenu
         await drawBubbleToCanvas(ctx, bubble, currentText);
       }
 
@@ -313,56 +301,58 @@ const App: React.FC = () => {
     }
   }, [uploadedImage, selectedBubbleId, canvasSize]);
 
+  // Fonction pour dessiner une bulle sur canvas
   const drawBubbleToCanvas = async (ctx: CanvasRenderingContext2D, bubble: Bubble, text: string) => {
-    const { x, y, width, height, type, borderColor, textColor, fontSize, parts, borderWidth } = bubble;
+    const { x, y, width, height, type, borderColor, textColor, fontSize, parts } = bubble;
 
     ctx.save();
     ctx.translate(x, y);
 
+    // Dessiner le corps de la bulle
     if (type !== BubbleType.TextOnly) {
       const { bodyPath, partsCircles } = generateBubblePaths(bubble);
-      const path = new Path2D(bodyPath);
 
+      const path = new Path2D(bodyPath);
       ctx.fillStyle = 'white';
       ctx.fill(path);
       ctx.strokeStyle = borderColor;
-      ctx.lineWidth = borderWidth;
-
+      ctx.lineWidth = 2;
       if (type === BubbleType.Whisper) {
         ctx.setLineDash([5, 5]);
       }
-
       ctx.stroke(path);
       ctx.setLineDash([]);
 
+      // Dessiner les parties supplémentaires (comme les points de pensée)
       partsCircles.forEach(part => {
         ctx.beginPath();
         ctx.arc(part.cx, part.cy, part.r, 0, 2 * Math.PI);
         ctx.fillStyle = 'white';
         ctx.fill();
         ctx.strokeStyle = borderColor;
-        ctx.lineWidth = borderWidth;
+        ctx.lineWidth = 2;
         ctx.stroke();
       });
     }
 
+    // Dessiner le texte en utilisant le rendu riche
     const fontMap: Record<string, string> = {
-      'font-comic': 'Comic Neue',
-      'font-bangers': 'Bangers',
-      'font-indie': 'Indie Flower',
-      'font-marker': 'Permanent Marker',
-      'font-arial': 'Arial',
+      'font-comic': "'Comic Neue', cursive",
+      'font-bangers': "'Bangers', cursive",
+      'font-indie': "'Indie Flower', cursive",
+      'font-marker': "'Permanent Marker', cursive",
+      'font-arial': "Arial, sans-serif",
     };
 
+
     try {
+      // Utiliser le nouveau système de calcul des limites de texte
       const textBounds = getTextBounds({ ...bubble, type, width, height });
       const textWidth = textBounds.width;
       const textHeight = textBounds.height;
       const textX = textBounds.x;
       const textY = textBounds.y;
-
       const { drawRichText } = await import('./utils/richTextRenderer');
-
       await drawRichText(
         ctx,
         text,
@@ -397,7 +387,9 @@ const App: React.FC = () => {
     const bubblesWithLatestText = bubblesRef.current.map(bubble => {
       const bubbleElement = document.querySelector(`[data-bubble-id="${bubble.id}"]`);
       const textElement = bubbleElement?.querySelector('.bubble-text') as HTMLDivElement | null;
+
       const currentText = textElement ? textElement.innerHTML : bubble.text;
+
       return { ...bubble, text: currentText };
     });
 
@@ -407,7 +399,7 @@ const App: React.FC = () => {
       toolSettings: toolSettings,
       nextZIndex: nextZIndex.current,
       canvasSize: canvasSize,
-      version: "1.2"
+      version: "1.1"
     };
 
     const jsonString = JSON.stringify(projectState, null, 2);
@@ -427,7 +419,6 @@ const App: React.FC = () => {
 
   const handleLoadProject = useCallback((file: File) => {
     const reader = new FileReader();
-
     reader.onload = (event) => {
       try {
         const projectState = JSON.parse(event.target?.result as string);
@@ -436,7 +427,7 @@ const App: React.FC = () => {
           throw new Error("Fichier de projet invalide ou corrompu.");
         }
 
-        const defaultBubbleProps = { textColor: '#000000', borderColor: '#000000', borderWidth: 2 };
+        const defaultBubbleProps = { textColor: '#000000', borderColor: '#000000' };
 
         setUploadedImage(projectState.image);
         setBubbles(projectState.bubbles.map((b: Bubble) => ({ ...defaultBubbleProps, ...b })));
@@ -446,29 +437,28 @@ const App: React.FC = () => {
         setSelectedBubbleId(null);
 
         alert("Projet chargé avec succès !");
+
       } catch (error) {
         console.error("Erreur lors du chargement du projet:", error);
         alert(`Erreur lors du chargement du projet: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
       }
     };
-
     reader.onerror = () => {
       alert("Impossible de lire le fichier de projet.");
     };
-
     reader.readAsText(file);
   }, []);
 
   return (
     <div className="flex flex-col h-screen bg-gray-200">
       <header className="bg-white shadow-md z-10 flex-shrink-0">
-        <h1 className="text-2xl sm:text-3xl font-bold py-3 text-center text-gray-800 font-Bangers tracking-wide">
+        <h1 className="text-2xl sm:text-3xl font-bold py-3 text-center text-gray-800 font-['Bangers'] tracking-wide">
           Éditeur de Bulles de Dialogue
         </h1>
       </header>
 
       <div className="flex flex-1 overflow-hidden">
-        <aside className="w-420px flex-shrink-0 overflow-y-auto p-4 bg-gray-50 border-r border-gray-300">
+        <aside className="w-[420px] flex-shrink-0 overflow-y-auto p-4 bg-gray-50 border-r border-gray-300">
           <Toolbar
             settings={toolSettings}
             onImageUpload={handleImageUpload}
@@ -483,10 +473,10 @@ const App: React.FC = () => {
           />
 
           <div className="mt-6 p-4 border border-yellow-300 rounded bg-yellow-50 text-yellow-700 text-sm">
-            <h2 className="text-lg font-semibold mb-2 font-Bangers">Instructions Rapides</h2>
+            <h2 className="text-lg font-semibold mb-2 font-['Bangers']">Instructions Rapides</h2>
             <ol className="list-decimal pl-5 space-y-1">
               <li><span className="font-semibold">Téléchargez</span> votre planche ou <span className="font-semibold">Ouvrez</span> un projet existant.</li>
-              <li><span className="font-semibold">Sélectionnez</span> type de bulle et options (police, taille texte, couleurs, etc...).</li>
+              <li><span className="font-semibold">Sélectionnez type de bulle</span> et options (police, taille texte, couleurs, etc.).</li>
               <li><span className="font-semibold">Cliquez sur l'image</span> pour placer une bulle.</li>
               <li><span className="font-semibold">Cliquez sur une bulle</span> pour la sélectionner (bordure bleue).</li>
               <li><span className="font-semibold">Glissez</span> une bulle sélectionnée pour la déplacer.</li>
